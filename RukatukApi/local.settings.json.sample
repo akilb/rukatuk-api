@@ -1,0 +1,7 @@
+// Add a file called "local.settings.json" and populate the settings
+{
+    "IsEncrypted": false,
+    "Values": {
+        "EventbriteOAuthToken": "ENTER API KEY"
+    }
+}
