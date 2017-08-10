@@ -6,9 +6,16 @@ namespace RukatukApi.Services
 {
     public class EventService : IEventService
     {
-        public Task UpdateEventsAsync(TraceWriter log, CancellationToken cancellationToken)
+        private readonly IEventbriteClient _eventbriteClient;
+
+        public EventService(IEventbriteClient eventbriteClient)
         {
-            throw new System.NotImplementedException();
+            _eventbriteClient = eventbriteClient;
+        }
+
+        public async Task UpdateEventsAsync(TraceWriter log, CancellationToken cancellationToken)
+        {
+            var events = await _eventbriteClient.GetEventsAsync(log, cancellationToken);
         }
     }
 }
