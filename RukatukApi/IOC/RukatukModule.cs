@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using FlickrNet;
+using Microsoft.WindowsAzure.Storage;
 using RukatukApi.Services;
 
 namespace RukatukApi.IOC
@@ -10,13 +11,12 @@ namespace RukatukApi.IOC
         {
             base.Load(builder);
 
-            builder.RegisterType<Configuration>().As<IConfiguration>().SingleInstance();
+            var configuration = new Configuration();
+            builder.RegisterInstance(configuration).As<IConfiguration>().SingleInstance();
             builder.RegisterType<EventService>().As<IEventService>().SingleInstance();
+            builder.RegisterType<AzureStorageEventRepository>().As<IEventRepository>().SingleInstance();
             builder.RegisterType<EventbriteClient>().As<IEventbriteClient>().SingleInstance();
-            builder.Register(c => {
-                var config = c.Resolve<IConfiguration>();
-                return new Flickr(config.FlickrApiKey, config.FlickrApiSecret);
-                }).SingleInstance();
+            builder.Register(c => new Flickr(configuration.FlickrApiKey, configuration.FlickrApiSecret)).SingleInstance();
         }
     }
 }

@@ -16,15 +16,18 @@ namespace RukatukApi.Services
         private readonly IEventbriteClient _eventbriteClient;
         private readonly Flickr _flickrClient;
         private readonly IConfiguration _configuration;
+        private readonly IEventRepository _eventRepository;
 
         public EventService(
             IEventbriteClient eventbriteClient,
             Flickr flickrClient,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEventRepository eventRepository)
         {
             _eventbriteClient = eventbriteClient;
             _flickrClient = flickrClient;
             _configuration = configuration;
+            _eventRepository = eventRepository;
         }
 
         public async Task UpdateEventsAsync(TraceWriter log, CancellationToken cancellationToken)

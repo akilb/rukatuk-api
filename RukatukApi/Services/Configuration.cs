@@ -4,6 +4,8 @@ namespace RukatukApi.Services
 {
     public class Configuration : IConfiguration
     {
+        public string AzureStorageConnectionString => GetEnvironmentVariable("RUKATUKAPI_STORAGE_CONNECTION_STRING");
+
         public string EventbriteOAuthToken => GetEnvironmentVariable("RUKATUKAPI_EVENTBRITE_OAUTH_TOKEN");
 
         public string FlickrApiKey => GetEnvironmentVariable("RUKATUKAPI_FLICKR_API_KEY");
