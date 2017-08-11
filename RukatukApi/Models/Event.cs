@@ -36,6 +36,9 @@ namespace RukatukApi.Models
         [DataMember(Name = "imageUrl")]
         public string ImageUrl { get; set; }
 
+        [DataMember(Name = "squareImageUrl")]
+        public string SquareImageUrl { get; set; }
+
         [DataMember(Name = "minTicketPrice")]
         public string MinTicketPrice { get; set; }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.WebJobs.Host;
+﻿using FlickrNet;
+using Microsoft.Azure.WebJobs.Host;
 using RukatukApi.Models;
 using System;
 using System.Collections.Generic;
@@ -10,11 +11,20 @@ namespace RukatukApi.Services
 {
     public class EventService : IEventService
     {
-        private readonly IEventbriteClient _eventbriteClient;
+        private static readonly HashSet<string> CancelledEvents = new HashSet<string>(new[] { "27361536091" });
 
-        public EventService(IEventbriteClient eventbriteClient)
+        private readonly IEventbriteClient _eventbriteClient;
+        private readonly Flickr _flickrClient;
+        private readonly IConfiguration _configuration;
+
+        public EventService(
+            IEventbriteClient eventbriteClient,
+            Flickr flickrClient,
+            IConfiguration configuration)
         {
             _eventbriteClient = eventbriteClient;
+            _flickrClient = flickrClient;
+            _configuration = configuration;
         }
 
         public async Task UpdateEventsAsync(TraceWriter log, CancellationToken cancellationToken)
@@ -22,12 +32,14 @@ namespace RukatukApi.Services
             var getEventsTask = _eventbriteClient.GetEventsAsync(log, cancellationToken);
             var getVenuesTask = _eventbriteClient.GetVenuesAsync(log, cancellationToken);
             var getCountriesTask = _eventbriteClient.GetCountriesAsync(log, cancellationToken);
+            var getPhotosTask = GetPhotosAsync(cancellationToken);
 
-            await Task.WhenAll(getEventsTask, getVenuesTask, getCountriesTask);
+            await Task.WhenAll(getEventsTask, getVenuesTask, getCountriesTask, getPhotosTask);
 
             var eventbriteEvents = getEventsTask.Result;
             var venuesLookup = getVenuesTask.Result.ToDictionary(v => v.Id);
             var countriesLookup = getCountriesTask.Result.ToDictionary(c => c.Code);
+            var photos = getPhotosTask.Result;
 
             var ticketClassRequests = eventbriteEvents.Select(e => _eventbriteClient.GetTicketClassesAsync(e.Id, log, cancellationToken));
             var ticketClassLookup = (await Task.WhenAll(ticketClassRequests))
@@ -35,14 +47,43 @@ namespace RukatukApi.Services
                                         .GroupBy(tc => tc.EventId)
                                         .ToDictionary(grp => grp.Key, grp => grp.ToList());
 
-            var events = eventbriteEvents.Select(e => CreateEvent(e, venuesLookup, ticketClassLookup, countriesLookup)).ToList();
+            var events = eventbriteEvents
+                            .Where(e => !CancelledEvents.Contains(e.Id))
+                            .Select(e => CreateEvent(e, venuesLookup, ticketClassLookup, countriesLookup, photos))
+                            .ToList();
+        }
+
+        private Task<PhotoLookup> GetPhotosAsync(CancellationToken cancellationToken)
+        {
+            return Task.Run(() =>
+            {
+                var rectangularPhotos = new Dictionary<string, string>();
+                var squarePhotos = new Dictionary<string, string>();
+                var photoSet = _flickrClient.PhotosetsGetPhotos(_configuration.FlickrPhotoSetId);
+                foreach (var photo in photoSet)
+                {
+                    var tokens = photo.Title?.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (tokens?.Length != 2)
+                    {
+                        continue;
+                    }
+
+                    var eventId = tokens[0];
+                    var lookup = tokens[1] == "rect" ? rectangularPhotos : squarePhotos;
+                    lookup.Add(eventId, photo.WebUrl);
+                }
+
+                return new PhotoLookup(rectangularPhotos, squarePhotos);
+            },
+            cancellationToken);
         }
 
         private Event CreateEvent(
             EventbriteEvent @event,
             IReadOnlyDictionary<string, EventbriteVenue> venueLookup,
             IReadOnlyDictionary<string, List<EventbriteTicketClass>> ticketClassLookup,
-            IReadOnlyDictionary<string, EventbriteCountry> countriesLookup)
+            IReadOnlyDictionary<string, EventbriteCountry> countriesLookup,
+            PhotoLookup photos)
         {
             EventbriteVenue venue;
             if (!venueLookup.TryGetValue(@event.VenueId, out venue))
@@ -68,6 +109,8 @@ namespace RukatukApi.Services
                                               .OrderBy(tc => tc.ActualCost?.Value ?? int.MaxValue)
                                               .Select(tc => tc.ActualCost?.Display)
                                               .FirstOrDefault();
+            var imageUrl = GetPhotoUrl(@event, photos.Rectangular);
+            var squareImageUrl = GetPhotoUrl(@event, photos.Square);
 
             return new Event
             {
@@ -80,7 +123,8 @@ namespace RukatukApi.Services
                 StartDate = ConvertDate(@event.Start),
                 EndDate = ConvertDate(@event.End),
                 VanityUrl = @event.VanityUrl,
-                ImageUrl = @event.Logo?.Original?.Url,
+                ImageUrl = imageUrl,
+                SquareImageUrl = squareImageUrl,
                 MinTicketPrice = minTicketPrice,
                 Venue = new Venue
                 {
@@ -96,9 +140,28 @@ namespace RukatukApi.Services
             };
         }
 
+        private string GetPhotoUrl(EventbriteEvent @event, IReadOnlyDictionary<string, string> lookup)
+        {
+            return lookup.TryGetValue(@event.Id, out string photoUrl) ? photoUrl : @event.Logo?.Original?.Url;
+        }
+
         private DateTimeOffset ConvertDate(EventbriteDate date)
         {
             return new DateTimeOffset(date.Local, date.Local - date.Utc);
+        }
+
+        private class PhotoLookup
+        {
+            public PhotoLookup(
+                IReadOnlyDictionary<string, string> rectangular,
+                IReadOnlyDictionary<string, string> square)
+            {
+                Rectangular = rectangular;
+                Square = square;
+            }
+
+            public IReadOnlyDictionary<string, string> Rectangular { get; }
+            public IReadOnlyDictionary<string, string> Square { get; }
         }
     }
 }
