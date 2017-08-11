@@ -54,6 +54,10 @@ namespace RukatukApi.Services
                             .Where(e => !CancelledEvents.Contains(e.Id))
                             .Select(e => CreateEvent(e, venuesLookup, ticketClassLookup, countriesLookup, photos))
                             .ToList();
+
+            log.Info($"Upserting {events.Count} events...");
+
+            await _eventRepository.UpsertEventsAsync(events, cancellationToken);
         }
 
         private Task<PhotoLookup> GetPhotosAsync(CancellationToken cancellationToken)
