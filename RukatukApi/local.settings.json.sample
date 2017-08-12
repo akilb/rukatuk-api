@@ -1,7 +1,10 @@
 // Add a file called "local.settings.json" and populate the settings
 {
-    "IsEncrypted": false,
-    "Values": {
-        "EventbriteOAuthToken": "ENTER API KEY"
-    }
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "EventbriteOAuthToken": "USE YOUR OWN",
+    "FlickrApiKey": "USE YOUR OWN",
+    "FlickrApiSecret": "USE YOUR OWN"
+  }
 }
