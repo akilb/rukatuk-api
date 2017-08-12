@@ -1,5 +1,6 @@
 # Sensitive information
 local.settings.json
+*.pubxml
 
 .DS_Store
 ._.DS_Store
