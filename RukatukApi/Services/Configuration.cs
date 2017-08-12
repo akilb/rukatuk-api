@@ -1,23 +1,18 @@
-﻿using System;
+﻿using Microsoft.Azure;
+using System;
 
 namespace RukatukApi.Services
 {
     public class Configuration : IConfiguration
     {
-        public string AzureStorageConnectionString => GetEnvironmentVariable("RUKATUKAPI_STORAGE_CONNECTION_STRING");
+        public string AzureStorageConnectionString => CloudConfigurationManager.GetSetting("AzureWebJobsStorage");
 
-        public string EventbriteOAuthToken => GetEnvironmentVariable("RUKATUKAPI_EVENTBRITE_OAUTH_TOKEN");
+        public string EventbriteOAuthToken => CloudConfigurationManager.GetSetting("EventbriteOAuthToken");
 
-        public string FlickrApiKey => GetEnvironmentVariable("RUKATUKAPI_FLICKR_API_KEY");
+        public string FlickrApiKey => CloudConfigurationManager.GetSetting("FlickrApiKey");
 
-        public string FlickrApiSecret => GetEnvironmentVariable("RUKATUKAPI_FLICKR_API_SECRET");
+        public string FlickrApiSecret => CloudConfigurationManager.GetSetting("FlickrApiSecret");
 
         public string FlickrPhotoSetId => "72157687357180146";
-
-        private string GetEnvironmentVariable(string name)
-        {
-            var valueInAzure = Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Process);
-            return valueInAzure ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Machine);
-        }
     }
 }
