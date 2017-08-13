@@ -60,6 +60,11 @@ namespace RukatukApi.Services
             await _eventRepository.UpsertEventsAsync(events, cancellationToken);
         }
 
+        public Task<IReadOnlyList<Event>> GetEventsAsync(CancellationToken cancellationToken)
+        {
+            return _eventRepository.GetEventsAsync(cancellationToken);
+        }
+
         private Task<PhotoLookup> GetPhotosAsync(CancellationToken cancellationToken)
         {
             return Task.Run(() =>

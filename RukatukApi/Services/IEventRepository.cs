@@ -8,5 +8,7 @@ namespace RukatukApi.Services
     public interface IEventRepository
     {
         Task UpsertEventsAsync(IReadOnlyList<Event> events, CancellationToken cancellationToken);
+
+        Task<IReadOnlyList<Event>> GetEventsAsync(CancellationToken cancellationToken);
     }
 }

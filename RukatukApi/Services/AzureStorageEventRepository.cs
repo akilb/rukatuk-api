@@ -18,14 +18,31 @@ namespace RukatukApi.Services
             _blobClient = storageAccount.CreateCloudBlobClient();
         }
 
+        public async Task<IReadOnlyList<Event>> GetEventsAsync(CancellationToken cancellationToken)
+        {
+            var blockBlob = await GetEventsJsonBlob(cancellationToken);
+            var eventsJson = await blockBlob.DownloadTextAsync(cancellationToken);
+
+            var events = JsonConvert.DeserializeObject<Event[]>(eventsJson);
+            return events;
+        }
+
         public async Task UpsertEventsAsync(IReadOnlyList<Event> events, CancellationToken cancellationToken)
         {
+            var blockBlob = await GetEventsJsonBlob(cancellationToken);
+
+            var eventsJson = JsonConvert.SerializeObject(events);
+            await blockBlob.UploadTextAsync(eventsJson, cancellationToken);
+        }
+
+        private async Task<CloudBlockBlob> GetEventsJsonBlob(CancellationToken cancellationToken)
+        {
+
             var container = _blobClient.GetContainerReference("rukatuk-api");
             await container.CreateIfNotExistsAsync(cancellationToken);
 
-            var eventsJson = JsonConvert.SerializeObject(events);
             var blockBlob = container.GetBlockBlobReference("events.json");
-            await blockBlob.UploadTextAsync(eventsJson, cancellationToken);
+            return blockBlob;
         }
     }
 }
