@@ -1,0 +1,12 @@
+﻿{
+  "$schema": "http://json.schemastore.org/proxies",
+  "proxies": {
+    "letsencrypt": {
+      "matchCondition": {
+        "methods": [ "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "TRACE", "CONNECT", "OPTIONS" ],
+        "route": "/.well-known/acme-challenge/{*rest}"
+      },
+      "backendUri": "http://%WEBSITE_HOSTNAME%/letsencrypt/{rest}"
+    }
+  }
+}
