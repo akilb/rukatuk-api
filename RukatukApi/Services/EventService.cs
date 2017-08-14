@@ -69,8 +69,8 @@ namespace RukatukApi.Services
         {
             return Task.Run(() =>
             {
-                var rectangularPhotos = new Dictionary<string, string>();
-                var squarePhotos = new Dictionary<string, string>();
+                var largePhotos = new Dictionary<string, string>();
+                var smallPhotos = new Dictionary<string, string>();
                 var photoSet = _flickrClient.PhotosetsGetPhotos(_configuration.FlickrPhotoSetId);
                 foreach (var photo in photoSet)
                 {
@@ -81,11 +81,23 @@ namespace RukatukApi.Services
                     }
 
                     var eventId = tokens[0];
-                    var lookup = tokens[1] == "rect" ? rectangularPhotos : squarePhotos;
+                    Dictionary<string, string> lookup;
+                    string photoUrl;
+                    if (tokens[1] == "large" || tokens[1] == "rect")
+                    {
+                        lookup = largePhotos;
+                        photoUrl = photo.Large1600Url ?? photo.LargeUrl;
+                    }
+                    else
+                    {
+                        lookup = smallPhotos;
+                        photoUrl = photo.Small320Url ?? photo.SmallUrl;
+                    }
+
                     lookup.Add(eventId, photo.WebUrl);
                 }
 
-                return new PhotoLookup(rectangularPhotos, squarePhotos);
+                return new PhotoLookup(largePhotos, smallPhotos);
             },
             cancellationToken);
         }
@@ -121,8 +133,8 @@ namespace RukatukApi.Services
                                               .OrderBy(tc => tc.ActualCost?.Value ?? int.MaxValue)
                                               .Select(tc => tc.ActualCost?.Display)
                                               .FirstOrDefault();
-            var imageUrl = GetPhotoUrl(@event, photos.Rectangular);
-            var squareImageUrl = GetPhotoUrl(@event, photos.Square);
+            var imageUrl = GetPhotoUrl(@event, photos.Large);
+            var squareImageUrl = GetPhotoUrl(@event, photos.Small);
 
             return new Event
             {
@@ -165,15 +177,15 @@ namespace RukatukApi.Services
         private class PhotoLookup
         {
             public PhotoLookup(
-                IReadOnlyDictionary<string, string> rectangular,
-                IReadOnlyDictionary<string, string> square)
+                IReadOnlyDictionary<string, string> large,
+                IReadOnlyDictionary<string, string> small)
             {
-                Rectangular = rectangular;
-                Square = square;
+                Large = large;
+                Small = small;
             }
 
-            public IReadOnlyDictionary<string, string> Rectangular { get; }
-            public IReadOnlyDictionary<string, string> Square { get; }
+            public IReadOnlyDictionary<string, string> Large { get; }
+            public IReadOnlyDictionary<string, string> Small { get; }
         }
     }
 }
